@@ -12,6 +12,7 @@ and adds some functionality to be more like
 - Auto-format separator lines
 - Set your own separator/separator column signs
 - Not limited to some filetype: you can call the lua functions in any filetype
+- Preserves indentation (linewise)
 
 ## Installation
 

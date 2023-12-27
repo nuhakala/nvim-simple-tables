@@ -37,8 +37,8 @@ function Tablemd.formatTable()
 
     -- Format each line
     for i = start_line, end_line do -- The range includes both ends.
-        local line = H.trim_string(vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1])
-        local formatted_line = H.get_formatted_line(line, col_defs)
+        local line, count = H.trim_string(vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1])
+        local formatted_line = H.get_formatted_line(line, col_defs, count)
 
         -- replace the line with the formatted line in the buffer
         vim.api.nvim_buf_set_lines(0, i - 1, i, false, { formatted_line })
@@ -242,8 +242,8 @@ end
 -- HELPER FUNCTIONS
 
 ---Pad string
----@param string input The string to pad.
----@param int len The expected length of the return value.
+---@param input string The string to pad.
+---@param len number The expected length of the return value.
 ---@return string # String padded with spaces.
 H.pad_string = function(input, len, alignment)
     -- Treat alignment as an optional paramenter with a default value
@@ -276,8 +276,8 @@ H.pad_string = function(input, len, alignment)
 end
 
 ---Split string
----@param string input The string to split.
----@param string sep The separator string.
+---@param input string The string to split.
+---@param sep string The separator string.
 ---@return table # Table containing the split pieces
 H.split_string = function(input, sep)
     if sep == nil then
@@ -292,15 +292,24 @@ H.split_string = function(input, sep)
 end
 
 ---Trim spaces from beginning and end of string
----@param string s The string to trim.
----@return string # The trimmed string
+---@param s string The string to trim.
+---@return (string, number) # The trimmed string and number of whitespace in beginning
 H.trim_string = function(s)
-    return s:match("^%s*(.-)%s*$")
+    local count = 0
+    for c in s:gmatch(".") do
+        if c == " " then
+            count = count + 1
+        else
+            goto continue
+        end
+    end
+    ::continue::
+    return s:match("^%s*(.-)%s*$"), count
 end
 
 ---Returns a table with the max column widths and alignment information.
----@param int s The first line of the table
----@param int e The last line of the table
+---@param s number The first line of the table
+---@param e number The last line of the table
 ---@return table # Table with information for each column
 H.get_column_defs = function(s, e)
     -- look for alignment clues on the second line
@@ -360,7 +369,7 @@ H.get_column_defs = function(s, e)
 end
 
 ---Determines which column the cursor is currently in.
----@return int # The column index. This is Lua, so it is 1 based.
+---@return number # The column index. This is Lua, so it is 1 based.
 H.get_current_column_index = function()
     local cursor_location = vim.api.nvim_win_get_cursor(0)
     local line = H.trim_string(vim.api.nvim_buf_get_lines(0, cursor_location[1] - 1, cursor_location[1], false)[1])
@@ -375,10 +384,11 @@ H.get_current_column_index = function()
 end
 
 ---Returns the formatted line
----@param string line The line to be formatted
----@param table col_defs Table with metadata about each column
+---@param line string The line to be formatted
+---@param col_defs table Table with metadata about each column
+---@param count number Number of whitespace in beginning
 ---@return string # The formatted replacement line
-H.get_formatted_line = function(line, col_defs)
+H.get_formatted_line = function(line, col_defs, count)
     local t = H.split_string(line, "|")
     local build_str = "| "
 
@@ -401,11 +411,14 @@ H.get_formatted_line = function(line, col_defs)
         build_str = string.gsub(build_str, '^%s*(.-)%s*$', '%1')
     end
 
+    for _ = 1, count do
+        build_str = " " .. build_str
+    end
     return build_str
 end
 
 --- Check if given line is separator line
----@param t Table containing split pieces form split_string
+---@param t table Table containing split pieces form split_string
 ---@return boolean
 H.is_separator = function(t)
     if next(t) == nil then
@@ -448,7 +461,7 @@ H.get_table_range = function(current_line_number)
     repeat
         current_line = vim.api.nvim_buf_get_lines(0, start_line - 1, start_line, false)[1]
         start_line = start_line - 1
-    until current_line == "" or start_line == 0
+    until H.trim_string(current_line):sub(1, 1) ~= "|" or start_line == 0
 
     start_line = start_line + 2
 
@@ -456,7 +469,7 @@ H.get_table_range = function(current_line_number)
     end_line = current_line_number --+ 1
     current_line = vim.api.nvim_buf_get_lines(0, end_line - 1, end_line, false)[1]
 
-    while current_line ~= "" and current_line ~= nil and end_line <= buf_line_count do
+    while current_line ~= nil and H.trim_string(current_line):sub(1, 1) == "|" and end_line <= buf_line_count do
         end_line = end_line + 1
         current_line = vim.api.nvim_buf_get_lines(0, end_line - 1, end_line, false)[1]
     end
