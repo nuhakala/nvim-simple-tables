@@ -7,7 +7,7 @@ local modeFlag = false
 Tablemd.config = {
     defaultKeymap = true,
     separator = "-",
-    separatorColumn = "+",
+    separatorColumn = "|",
 }
 
 Tablemd.setup = function(cfg)
@@ -206,7 +206,7 @@ Inserts a new row into the table
 function Tablemd.insertRow(before)
     -- Get the current location of the cursor
     local cursor_location = vim.api.nvim_win_get_cursor(0)
-    print(vim.inspect(cursor_location))
+    -- print(vim.inspect(cursor_location))
     local line_num = cursor_location[1]
 
     local col_defs = H.get_column_defs(line_num, line_num)
@@ -339,7 +339,6 @@ H.get_column_defs = function(s, e)
         -- For each column
         for k, v in ipairs(t) do
             local trimmed_str = H.trim_string(v)
-            print(trimmed_str)
             -- Fix ä, ö not counting correctly. However, this does not provide
             -- full utf8 support.
             local _, str_len = string.gsub(trimmed_str, "[^\128-\193]", "")
@@ -402,7 +401,6 @@ Returns the formatted line
 H.get_formatted_line = function(line, col_defs)
     local t = H.split_string(line, "|")
     local build_str = "| "
-    vim.print(t)
 
     if H.is_separator(t) then
         build_str = "|"
