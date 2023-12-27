@@ -495,16 +495,18 @@ end
 H.default_config = vim.deepcopy(Tablemd.config)
 
 ---Combine default and user-provided configs
----@param cfg table user-provided config
+---@param config table user-provided config
 ---@return table # Combined config
-H.setup_config = function(cfg)
+H.setup_config = function(config)
     -- General idea: if some table elements are not present in user-supplied
     -- `config`, take them from default config
-    vim.validate({ config = { cfg, 'table', true } })
-    local config = vim.tbl_deep_extend('force', vim.deepcopy(H.default_config), cfg or {})
+    vim.validate({ config = { config, 'table', true } })
+    config = vim.tbl_deep_extend('force', vim.deepcopy(H.default_config), config or {})
 
     vim.validate({
-        defaultKeymap = { cfg.defaultKeymap, 'boolean' },
+        defaultKeymap = { config.defaultKeymap, 'boolean' },
+        separator = { config.separator, "string" },
+        separatorColumn = { config.separatorColumn, "string" }
     })
 
     return config
