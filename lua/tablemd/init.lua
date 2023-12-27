@@ -3,12 +3,16 @@ local Tablemd = {}
 local H = {} -- for helper functions
 local modeFlag = false
 
+-- Default config
 Tablemd.config = {
-    defaultKeymap = true
+    defaultKeymap = true,
+    separator = "-",
+    separatorColumn = "+",
 }
 
 Tablemd.setup = function(cfg)
     local config = H.setup_config(cfg)
+    Tablemd.config = config
 
     if config.defaultKeymap then
         H.setKeyMap()
@@ -294,8 +298,6 @@ H.split_string = function(input, sep)
 
     local t = {}
     for str in string.gmatch(input, "([^" .. sep .. "]+)") do
-        -- print(str .. " pituus: " .. string.len(str))
-        -- print(str)
         table.insert(t, str)
     end
     return t
@@ -400,17 +402,21 @@ Returns the formatted line
 H.get_formatted_line = function(line, col_defs)
     local t = H.split_string(line, "|")
     local build_str = "| "
+    vim.print(t)
 
     if H.is_separator(t) then
         build_str = "|"
         for _, v in ipairs(col_defs) do
-            build_str = build_str .. H.get_separator_cell(v["length"] + 2) .. "|"
+            build_str = build_str .. H.get_separator_cell(v["length"] + 2) .. Tablemd.config.separatorColumn
         end
+        build_str = build_str:sub(1, -2)
+        build_str = build_str .. "|"
     else
-        for k, v in ipairs(t) do
-            local col_width = col_defs[k]["length"]
-            local col_align = col_defs[k]["align"]
-            local padded_str = H.pad_string(H.trim_string(v), col_width, col_align)
+        for k, v in ipairs(col_defs) do
+            local col_width = v["length"]
+            local col_align = v["align"]
+            local str = t[k] and t[k] or ""
+            local padded_str = H.pad_string(H.trim_string(str), col_width, col_align)
             build_str = build_str .. padded_str .. " | "
         end
         -- Trim off beginning or trailing spaces.
@@ -427,7 +433,7 @@ H.is_separator = function(t)
     else
         for _, v in ipairs(t) do
             for c in v:gmatch(".") do
-                if c ~= "-" and c ~= " " then
+                if c ~= Tablemd.config.separator and c ~= Tablemd.config.separatorColumn then
                     return false
                 end
             end
@@ -439,7 +445,7 @@ end
 H.get_separator_cell = function(width)
     local res = ""
     for _ = 1, width do
-        res = res .. "-"
+        res = res .. Tablemd.config.separator
     end
     return res
 end
@@ -481,14 +487,14 @@ H.get_table_range = function(current_line_number)
 end
 
 H.setKeyMap = function()
-    vim.api.nvim_set_keymap("n", "<Leader>tf", ':lua require("tablemd").format()<cr>', { noremap = true, desc = "Format table" })
-    vim.api.nvim_set_keymap("n", "<Leader>tC", ':lua require("tablemd").insertColumn(false)<cr>', { noremap = true, desc = "Insert column before" })
-    vim.api.nvim_set_keymap("n", "<Leader>tc", ':lua require("tablemd").insertColumn(true)<cr>', { noremap = true, desc = "Insert column after" })
-    vim.api.nvim_set_keymap("n", "<Leader>td", ':lua require("tablemd").deleteColumn()<cr>', { noremap = true, desc = "Delete column" })
-    vim.api.nvim_set_keymap("n", "<Leader>tr", ':lua require("tablemd").insertRow(false)<cr>', { noremap = true, desc = "Insert row before" })
-    vim.api.nvim_set_keymap("n", "<Leader>tR", ':lua require("tablemd").insertRow(true)<cr>', { noremap = true, desc = "Insert row after" })
-    vim.api.nvim_set_keymap("n", "<Leader>tk", ':lua require("tablemd").alignColumn("center")<cr>', { noremap = true, desc = "Toggle column align" })
-    vim.api.nvim_set_keymap("n", "<Leader>tm", ':lua require("tablemd").toggleMode()<cr>', { noremap = true, desc = "Toggle tablemode" })
+    vim.api.nvim_set_keymap("n", "<Leader>ef", ':lua require("tablemd").format()<cr>', { noremap = true, desc = "Format table" })
+    vim.api.nvim_set_keymap("n", "<Leader>eC", ':lua require("tablemd").insertColumn(false)<cr>', { noremap = true, desc = "Insert column before" })
+    vim.api.nvim_set_keymap("n", "<Leader>ec", ':lua require("tablemd").insertColumn(true)<cr>', { noremap = true, desc = "Insert column after" })
+    vim.api.nvim_set_keymap("n", "<Leader>ed", ':lua require("tablemd").deleteColumn()<cr>', { noremap = true, desc = "Delete column" })
+    vim.api.nvim_set_keymap("n", "<Leader>er", ':lua require("tablemd").insertRow(false)<cr>', { noremap = true, desc = "Insert row before" })
+    vim.api.nvim_set_keymap("n", "<Leader>eR", ':lua require("tablemd").insertRow(true)<cr>', { noremap = true, desc = "Insert row after" })
+    vim.api.nvim_set_keymap("n", "<Leader>ek", ':lua require("tablemd").alignColumn("center")<cr>', { noremap = true, desc = "Toggle column align" })
+    vim.api.nvim_set_keymap("n", "<Leader>em", ':lua require("tablemd").toggleMode()<cr>', { noremap = true, desc = "Toggle tablemode" })
 end
 
 H.default_config = vim.deepcopy(Tablemd.config)
