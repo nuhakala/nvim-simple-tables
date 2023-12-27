@@ -1,13 +1,17 @@
 # Neovim simple tables
 
-I stumbled some time ago into
-[https://github.com/dhruvasagar/vim-table-mode]{table mode} and I really liked
-it. However, it was overriding some of my keybindings and I was not able to
-disable the keybindings or change the leader because of a bug. I have not been
-able to find another as good table-mode plugin so I decided to make my own.
+Neovim plugin to help with markdown tables.
+This plugin is inspired by [nvim-table-md](https://github.com/allen-mack/nvim-table-md)
+and adds some functionality to be more like
+[vim-table-mode](https://github.com/dhruvasagar/vim-table-mode).
 
-This plugin is inspired by [vim-table-mode](https://github.com/dhruvasagar/vim-table-mode)
-but aims to be simpler.
+## Features
+
+- Add/delete columns/rows
+- Mode for automatically formatting table (when leaving insert mode)
+- Auto-format separator lines
+- Set your own separator/separator column signs
+- Not limited to some filetype: you can call the lua functions in any filetype
 
 ## Installation
 
@@ -52,14 +56,14 @@ Default keymaps are
 Or if you want to set them yourself:
 
 ``` lua
-vim.api.nvim_set_keymap("n", "<Leader>tf", ':lua require("tablemd").format()<cr>', { noremap = true })
-vim.api.nvim_set_keymap("n", "<Leader>tc", ':lua require("tablemd").insertColumn(false)<cr>', { noremap = true })
-vim.api.nvim_set_keymap("n", "<Leader>td", ':lua require("tablemd").deleteColumn()<cr>', { noremap = true })
-vim.api.nvim_set_keymap("n", "<Leader>tr", ':lua require("tablemd").insertRow(false)<cr>', { noremap = true })
-vim.api.nvim_set_keymap("n", "<Leader>tR", ':lua require("tablemd").insertRow(true)<cr>', { noremap = true })
-vim.api.nvim_set_keymap("n", "<Leader>tj", ':lua require("tablemd").alignColumn("left")<cr>', { noremap = true })
-vim.api.nvim_set_keymap("n", "<Leader>tk", ':lua require("tablemd").alignColumn("center")<cr>', { noremap = true })
-vim.api.nvim_set_keymap("n", "<Leader>tl", ':lua require("tablemd").alignColumn("right")<cr>', { noremap = true })
+vim.api.nvim_set_keymap("n", "<Leader>ef", ':lua require("tablemd").format()<cr>', { noremap = true })
+vim.api.nvim_set_keymap("n", "<Leader>ec", ':lua require("tablemd").insertColumn(false)<cr>', { noremap = true })
+vim.api.nvim_set_keymap("n", "<Leader>ed", ':lua require("tablemd").deleteColumn()<cr>', { noremap = true })
+vim.api.nvim_set_keymap("n", "<Leader>er", ':lua require("tablemd").insertRow(false)<cr>', { noremap = true })
+vim.api.nvim_set_keymap("n", "<Leader>eR", ':lua require("tablemd").insertRow(true)<cr>', { noremap = true })
+vim.api.nvim_set_keymap("n", "<Leader>ej", ':lua require("tablemd").alignColumn("left")<cr>', { noremap = true })
+vim.api.nvim_set_keymap("n", "<Leader>ek", ':lua require("tablemd").alignColumn("center")<cr>', { noremap = true })
+vim.api.nvim_set_keymap("n", "<Leader>el", ':lua require("tablemd").alignColumn("right")<cr>', { noremap = true })
 ```
 
 ## Credits
