@@ -21,9 +21,8 @@ end
 
 
 -- TABLEMODE FUNCTIONS
---[[
-Formats the markdown table so cells in a column are a uniform width.
-]]
+
+---Formats the markdown table so cells in a column are a uniform width.
 function Tablemd.formatTable()
     local start_line = nil
     local end_line = nil
@@ -46,9 +45,7 @@ function Tablemd.formatTable()
     end
 end
 
---[[--
-Aligns the column. Possible values for alignment are "left", "right", and "center".
-]]
+---Aligns the column. Possible values for alignment are "left", "right", and "center".
 function Tablemd.alignColumn(alignment)
     -- Don't do anything if the alignment value isn't one of the predefined values.
     if not (alignment == "left" or alignment == "right" or alignment == "center") then
@@ -101,9 +98,7 @@ function Tablemd.alignColumn(alignment)
     Tablemd.formatTable()
 end
 
---[[--
-Deletes the current column from the table.
-]]
+---Deletes the current column from the table.
 function Tablemd.deleteColumn()
     local start_line = nil
     local end_line = nil
@@ -140,10 +135,8 @@ function Tablemd.deleteColumn()
     Tablemd.formatTable()
 end
 
---[[--
-Formats each line in the table with a new column.
-@tparam bool before If true, the column will be inserted on the left side of the current column
-]]
+---Formats each line in the table with a new column.
+---@param bool before If true, the column will be inserted on the left side of the current column
 function Tablemd.insertColumn(before)
     local start_line = nil
     local end_line = nil
@@ -199,10 +192,8 @@ function Tablemd.insertColumn(before)
     Tablemd.formatTable()
 end
 
---[[--
-Inserts a new row into the table
-@tparam bool before If true, the row will be inserted above the current row
-]]
+---Inserts a new row into the table
+---@param bool before If true, the row will be inserted above the current row
 function Tablemd.insertRow(before)
     -- Get the current location of the cursor
     local cursor_location = vim.api.nvim_win_get_cursor(0)
@@ -230,6 +221,7 @@ function Tablemd.insertRow(before)
     Tablemd.formatTable()
 end
 
+---Toggle tablemode
 Tablemd.toggleMode = function()
     if not modeFlag then
         local auGroup = vim.api.nvim_create_augroup('Tablemode', { clear = false })
@@ -247,14 +239,12 @@ Tablemd.toggleMode = function()
 end
 
 
-
 -- HELPER FUNCTIONS
---[[--
-Pad string
-@tparam string input The string to pad.
-@tparam int len The expected length of the return value.
-@treturn string String padded with spaces.
-]]
+
+---Pad string
+---@param string input The string to pad.
+---@param int len The expected length of the return value.
+---@return string # String padded with spaces.
 H.pad_string = function(input, len, alignment)
     -- Treat alignment as an optional paramenter with a default value
     alignment = alignment or 'left'
@@ -285,12 +275,10 @@ H.pad_string = function(input, len, alignment)
     return input
 end
 
---[[--
-Split string
-@tparam string input The string to split.
-@tparam string sep The separator string.
-@return table Table containing the split pieces
-]]
+---Split string
+---@param string input The string to split.
+---@param string sep The separator string.
+---@return table # Table containing the split pieces
 H.split_string = function(input, sep)
     if sep == nil then
         sep = "%s"
@@ -303,21 +291,17 @@ H.split_string = function(input, sep)
     return t
 end
 
---[[--
-Trim spaces from beginning and end of string
-@tparam string s The string to trim.
-@treturn string The trimmed string
-]]
+---Trim spaces from beginning and end of string
+---@param string s The string to trim.
+---@return string # The trimmed string
 H.trim_string = function(s)
     return s:match("^%s*(.-)%s*$")
 end
 
---[[--
-Returns a table with the max column widths and alignment information.
-@tparam int s The first line of the table
-@tparam int e The last line of the table
-@treturn table Table with information for each column
-]]
+---Returns a table with the max column widths and alignment information.
+---@param int s The first line of the table
+---@param int e The last line of the table
+---@return table # Table with information for each column
 H.get_column_defs = function(s, e)
     -- look for alignment clues on the second line
     -- local second_line = s + 1
@@ -375,10 +359,8 @@ H.get_column_defs = function(s, e)
     return defs
 end
 
---[[--
-Determines which column the cursor is currently in.
-@treturn int The column index. This is Lua, so it is 1 based.
-]]
+---Determines which column the cursor is currently in.
+---@return int # The column index. This is Lua, so it is 1 based.
 H.get_current_column_index = function()
     local cursor_location = vim.api.nvim_win_get_cursor(0)
     local line = H.trim_string(vim.api.nvim_buf_get_lines(0, cursor_location[1] - 1, cursor_location[1], false)[1])
@@ -392,12 +374,10 @@ H.get_current_column_index = function()
     return count
 end
 
---[[--
-Returns the formatted line
-@tparam string line The line to be formatted
-@tparam table col_defs Table with metadata about each column
-@treturn string The formatted replacement line
-]]
+---Returns the formatted line
+---@param string line The line to be formatted
+---@param table col_defs Table with metadata about each column
+---@return string # The formatted replacement line
 H.get_formatted_line = function(line, col_defs)
     local t = H.split_string(line, "|")
     local build_str = "| "
@@ -424,7 +404,9 @@ H.get_formatted_line = function(line, col_defs)
     return build_str
 end
 
--- t = table containing split pieces from split_string
+--- Check if given line is separator line
+---@param t Table containing split pieces form split_string
+---@return boolean
 H.is_separator = function(t)
     if next(t) == nil then
         return true
@@ -440,6 +422,9 @@ H.is_separator = function(t)
     return true
 end
 
+---Returns string of separators for one cell.
+---@param width number
+---@return string
 H.get_separator_cell = function(width)
     local res = ""
     for _ = 1, width do
@@ -448,11 +433,9 @@ H.get_separator_cell = function(width)
     return res
 end
 
---[[--
-Find the first line and last line of the table.
-@tparam int current_line_number The line number that the cursor is currently on.
-@treturn int, int The start line and end line for the table.
-]]
+---Find the first line and last line of the table.
+---@param current_line_number number current_line_number The line number that the cursor is currently on.
+---@return (number, number) The start line and end line for the table.
 H.get_table_range = function(current_line_number)
     local start_line
     local end_line
@@ -484,6 +467,7 @@ H.get_table_range = function(current_line_number)
     return start_line, end_line
 end
 
+---Set default keymaps
 H.setKeyMap = function()
     vim.api.nvim_set_keymap("n", "<Leader>ef", ':lua require("tablemd").format()<cr>', { noremap = true, desc = "Format table" })
     vim.api.nvim_set_keymap("n", "<Leader>eC", ':lua require("tablemd").insertColumn(false)<cr>', { noremap = true, desc = "Insert column before" })
@@ -497,22 +481,21 @@ end
 
 H.default_config = vim.deepcopy(Tablemd.config)
 
-H.setup_config = function(config)
+---Combine default and user-provided configs
+---@param cfg table user-provided config
+---@return table # Combined config
+H.setup_config = function(cfg)
     -- General idea: if some table elements are not present in user-supplied
     -- `config`, take them from default config
-    vim.validate({ config = { config, 'table', true } })
-    config = vim.tbl_deep_extend('force', vim.deepcopy(H.default_config), config or {})
+    vim.validate({ config = { cfg, 'table', true } })
+    local config = vim.tbl_deep_extend('force', vim.deepcopy(H.default_config), cfg or {})
 
     vim.validate({
-        defaultKeymap = { config.defaultKeymap, 'boolean' },
+        defaultKeymap = { cfg.defaultKeymap, 'boolean' },
     })
 
     return config
 end
-
--- H.apply_config = function(config)
---   Tablemd.config = config
--- end
 
 -- Export module
 return Tablemd
