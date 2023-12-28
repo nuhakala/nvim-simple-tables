@@ -10,8 +10,7 @@ and adds some functionality to be more like
 - Add/delete columns/rows
 - Mode for automatically formatting table (when leaving insert mode)
 - Auto-format separator lines
-- Set your own separator/separator column signs
-- Not limited to some filetype: you can call the lua functions in any filetype
+- Not limited to some filetype: you can call the lua functions in any file
 - Preserves indentation (linewise)
 
 ## Installation
@@ -33,8 +32,7 @@ Lazy.
 ``` lua
 {
     defaultKeymap = true,
-    separator = "-",
-    separatorColumn = "|",
+    defaultAlign = "left"
 }
 ```
 
@@ -53,18 +51,20 @@ Default keymaps are
 | \<Leader\>ek | Center column                         |
 | \<Leader\>el | Align column to the right             |
 | \<Leader\>em | Toggle mode                           |
+| \<Leader\>et | Toggle alignment                      |
 
 Or if you want to set them yourself:
 
 ``` lua
-vim.api.nvim_set_keymap("n", "<Leader>ef", ':lua require("tablemd").format()<cr>', { noremap = true })
-vim.api.nvim_set_keymap("n", "<Leader>ec", ':lua require("tablemd").insertColumn(false)<cr>', { noremap = true })
-vim.api.nvim_set_keymap("n", "<Leader>ed", ':lua require("tablemd").deleteColumn()<cr>', { noremap = true })
-vim.api.nvim_set_keymap("n", "<Leader>er", ':lua require("tablemd").insertRow(false)<cr>', { noremap = true })
-vim.api.nvim_set_keymap("n", "<Leader>eR", ':lua require("tablemd").insertRow(true)<cr>', { noremap = true })
-vim.api.nvim_set_keymap("n", "<Leader>ej", ':lua require("tablemd").alignColumn("left")<cr>', { noremap = true })
-vim.api.nvim_set_keymap("n", "<Leader>ek", ':lua require("tablemd").alignColumn("center")<cr>', { noremap = true })
-vim.api.nvim_set_keymap("n", "<Leader>el", ':lua require("tablemd").alignColumn("right")<cr>', { noremap = true })
+vim.api.nvim_set_keymap("n", "<Leader>ef", ':lua require("tablemd").formatTable()<cr>', { noremap = true, desc = "Format table" })
+vim.api.nvim_set_keymap("n", "<Leader>eC", ':lua require("tablemd").insertColumn(false)<cr>', { noremap = true, desc = "Insert column before" })
+vim.api.nvim_set_keymap("n", "<Leader>ec", ':lua require("tablemd").insertColumn(true)<cr>', { noremap = true, desc = "Insert column after" })
+vim.api.nvim_set_keymap("n", "<Leader>ed", ':lua require("tablemd").deleteColumn()<cr>', { noremap = true, desc = "Delete column" })
+vim.api.nvim_set_keymap("n", "<Leader>er", ':lua require("tablemd").insertRow(false)<cr>', { noremap = true, desc = "Insert row before" })
+vim.api.nvim_set_keymap("n", "<Leader>eR", ':lua require("tablemd").insertRow(true)<cr>', { noremap = true, desc = "Insert row after" })
+vim.api.nvim_set_keymap("n", "<Leader>ek", ':lua require("tablemd").alignColumn("center")<cr>', { noremap = true, desc = "Toggle column align" })
+vim.api.nvim_set_keymap("n", "<Leader>em", ':lua require("tablemd").toggleMode()<cr>', { noremap = true, desc = "Toggle tablemode" })
+vim.api.nvim_set_keymap("n", "<Leader>et", ':lua require("tablemd").toggleAlign()<cr>', { noremap = true, desc = "Toggle column alignment" })
 ```
 
 ## Credits

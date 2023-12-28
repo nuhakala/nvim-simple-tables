@@ -6,8 +6,9 @@ local modeFlag = false
 -- Default config
 Tablemd.config = {
     defaultKeymap = true,
-    separator = "-",
-    separatorColumn = "|",
+    separator = "-", -- changing this also breaks it
+    separatorColumn = "|", -- Changing this breaks it
+    defaultAlign = "left",
 }
 
 Tablemd.setup = function(cfg)
@@ -26,7 +27,6 @@ end
 function Tablemd.formatTable()
     local start_line = nil
     local end_line = nil
-    local cur_line = nil
     local cursor_location = vim.fn.line('v')
 
     -- Get the range of lines to format
@@ -53,21 +53,25 @@ function Tablemd.alignColumn(alignment)
     end
 
     local start_line = nil
-    local end_line = nil
     local cursor_location = vim.api.nvim_win_get_cursor(0)
 
     -- Get the range of lines to format
     start_line, end_line = H.get_table_range(cursor_location[1])
 
-    -- Get column definitions
-    local col_defs = H.get_column_defs(start_line, end_line)
-
     -- Get the current column index
     local current_col = H.get_current_column_index()
 
     -- Get the second line
-    local line = H.trim_string(vim.api.nvim_buf_get_lines(0, start_line, start_line + 1, false)[1])
-    local t = H.split_string(line, "|")
+    local line, indent = H.trim_string(vim.api.nvim_buf_get_lines(0, start_line, start_line + 1, false)[1])
+    local t = H.split_string(line, Tablemd.config.separatorColumn)
+    local is_second = H.is_separator(t)
+    local is_first = false
+    if not is_second then
+        line, indent = H.trim_string(vim.api.nvim_buf_get_lines(0, start_line - 1, start_line, false)[1])
+        t = H.split_string(line, Tablemd.config.separatorColumn)
+        is_first = H.is_separator(t)
+    end
+    local is_new = not is_first and not is_second
 
     -- Rebuild the line
     local new_line = "|"
@@ -76,24 +80,46 @@ function Tablemd.alignColumn(alignment)
 
     for i = 1, table_len do
         if i ~= current_col then
-            new_line = new_line .. H.trim_string(t[i]) .. " | "
+            if is_new then
+                new_line = new_line .. H.get_separator_cell(3) .. Tablemd.config.separatorColumn
+            else
+                new_line = new_line .. H.trim_string(t[i]) .. Tablemd.config.separatorColumn
+            end
         else
+            local build_str = H.trim_string(t[i]):sub(2, -2)
+            if is_new then
+                build_str = "---"
+            end
+
             if alignment == "left" then
-                new_line = new_line .. "--- | "
+                new_line = new_line .. build_str .. Tablemd.config.separatorColumn
             end
 
             if alignment == "right" then
-                new_line = new_line .. "---: | "
+                new_line = new_line .. build_str .. ":" .. Tablemd.config.separatorColumn
             end
 
             if alignment == "center" then
-                new_line = new_line .. ":---: | "
+                new_line = new_line .. ":" .. build_str .. ":" .. Tablemd.config.separatorColumn
             end
         end
     end
+    new_line = H.replace_last(new_line)
 
-    -- replace the line with the formatted line in the buffer
-    vim.api.nvim_buf_set_lines(0, start_line, start_line + 1, false, { new_line })
+    -- Replace second line with the formatted line in the buffer, if the second
+    -- line is a separator.
+    -- If not, then add a new line to the beginning of the table
+    if is_second then
+        vim.api.nvim_buf_set_lines(0, start_line, start_line + 1, false, { H.add_indent(new_line, indent) })
+    else
+        -- If first line is separator, then replace it
+        -- Otherwise add new row
+        if is_first then
+            vim.api.nvim_buf_set_lines(0, start_line - 1, start_line, false, { H.add_indent(new_line, indent) })
+        else
+            vim.api.nvim_buf_set_lines(0, start_line - 1, start_line - 1, false, { H.add_indent(new_line, indent) })
+        end
+    end
 
     Tablemd.formatTable()
 end
@@ -103,20 +129,18 @@ function Tablemd.deleteColumn()
     local start_line = nil
     local end_line = nil
     local cursor_location = vim.api.nvim_win_get_cursor(0)
+    local m = Tablemd.config.separatorColumn
 
     -- Get the range of lines to format
     start_line, end_line = H.get_table_range(cursor_location[1])
-
-    -- Get column definitions
-    local col_defs = H.get_column_defs(start_line, end_line)
 
     -- Get the current column index
     local current_col = H.get_current_column_index()
 
     -- Format each line
     for i = start_line, end_line do
-        local line = H.trim_string(vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1])
-        local t = H.split_string(line, "|")
+        local line, indent = H.trim_string(vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1])
+        local t = H.split_string(line, m)
 
         local new_line = "|"
         local table_len = 0
@@ -124,12 +148,13 @@ function Tablemd.deleteColumn()
 
         for j = 1, table_len do
             if j ~= current_col then
-                new_line = new_line .. H.trim_string(t[j]) .. " | "
+                new_line = new_line .. H.trim_string(t[j]) .. " ".. m .. " "
             end
         end
 
-        -- replave the line with the formatted line in the buffer
-        vim.api.nvim_buf_set_lines(0, i - 1, i, false, { new_line })
+        -- replace the line with the formatted line in the buffer
+        new_line = H.replace_last(new_line)
+        vim.api.nvim_buf_set_lines(0, i - 1, i, false, { H.add_indent(new_line, indent) })
     end
 
     Tablemd.formatTable()
@@ -141,52 +166,56 @@ function Tablemd.insertColumn(before)
     local start_line = nil
     local end_line = nil
     local cursor_location = vim.api.nvim_win_get_cursor(0)
+    local m = Tablemd.config.separatorColumn
 
     -- Get the range of lines to format
     start_line, end_line = H.get_table_range(cursor_location[1])
-
-    -- Get column definitions
-    local col_defs = H.get_column_defs(start_line, end_line)
 
     -- Get the current column index
     local current_col = H.get_current_column_index()
 
     -- Format each line
     for i = start_line, end_line do -- The range includes both ends.
-        local line = H.trim_string(vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1])
+        local line, indent = H.trim_string(vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1])
 
-        local t = H.split_string(line, "|")
+        local t = H.split_string(line, m)
+        local is_sep = H.is_separator(t)
 
         local new_line = "|"
         local table_len = 0
         for _ in pairs(t) do table_len = table_len + 1 end
 
         -- This code gets "duplicated" in the next loop, so it is encapsulated in a function here.
-        local insertBlankColumn = function(new_line, start_line, i)
-            if i == start_line + 1 then
-                new_line = new_line .. "--- | "
+        local insertBlankColumn = function(l)
+            if is_sep then
+                l = l .. "-----".. Tablemd.config.separatorColumn .. "-"
             else
-                new_line = new_line .. "    | "
+                l = l .. "    ".. Tablemd.config.separatorColumn .. " "
             end
 
-            return new_line
+            return l
         end
 
         -- Loop through every column in the table line.
         for j = 1, table_len do
             if before == true and j == current_col then
-                new_line = insertBlankColumn(new_line, start_line, i)
+                new_line = insertBlankColumn(new_line)
             end
 
-            new_line = new_line .. H.trim_string(t[j]) .. " | "
+            if is_sep then
+                new_line = new_line .. H.trim_string(t[j]) .. m
+            else
+                new_line = new_line .. H.trim_string(t[j]) .. " " .. m .. " "
+            end
 
             if before == false and j == current_col then
-                new_line = insertBlankColumn(new_line, start_line, i)
+                new_line = insertBlankColumn(new_line)
             end
         end
 
         -- replace the line with the formatted line in the buffer
-        vim.api.nvim_buf_set_lines(0, i - 1, i, false, { new_line })
+        new_line = H.replace_last(new_line)
+        vim.api.nvim_buf_set_lines(0, i - 1, i, false, { H.add_indent(new_line, indent) })
     end
 
     Tablemd.formatTable()
@@ -197,14 +226,14 @@ end
 function Tablemd.insertRow(before)
     -- Get the current location of the cursor
     local cursor_location = vim.api.nvim_win_get_cursor(0)
-    -- print(vim.inspect(cursor_location))
     local line_num = cursor_location[1]
+    local _, indent = H.trim_string(vim.api.nvim_buf_get_lines(0, line_num - 1, line_num, false)[1])
 
     local col_defs = H.get_column_defs(line_num, line_num)
     local new_line = "|"
 
-    for k, v in ipairs(col_defs) do
-        new_line = new_line .. "   |"
+    for _, _ in ipairs(col_defs) do
+        new_line = new_line .. "   " .. Tablemd.config.separatorColumn
     end
 
     -- If 'before' is true, then insert the row above the current row.
@@ -212,8 +241,9 @@ function Tablemd.insertRow(before)
         line_num = line_num - 1
     end
 
+    new_line = H.replace_last(new_line)
     -- To insert a line, pass in the same line number for both start and end.
-    vim.api.nvim_buf_set_lines(0, line_num, line_num, false, { new_line })
+    vim.api.nvim_buf_set_lines(0, line_num, line_num, false, { H.add_indent(new_line, indent) })
 
     -- Move the cursor to the newly created line
     vim.api.nvim_win_set_cursor(0, { line_num + 1, cursor_location[2] })
@@ -235,6 +265,26 @@ Tablemd.toggleMode = function()
         vim.api.nvim_clear_autocmds({ group = "Tablemode" })
         modeFlag = false
         print("Tablemode disabled")
+    end
+end
+
+---Toggle alignment of the column
+Tablemd.toggleAlign = function()
+    local cursor_location = vim.api.nvim_win_get_cursor(0)
+    -- Get the range of lines to format
+    local start_line, end_line = H.get_table_range(cursor_location[1])
+    -- Get the current column index
+    local current_col = H.get_current_column_index()
+
+    local col_defs = H.get_column_defs(start_line, end_line)
+    local col = col_defs[current_col]
+    local align = col["align"]
+    if align == "left" then
+        Tablemd.alignColumn("center")
+    elseif align == "center" then
+        Tablemd.alignColumn("right")
+    elseif align == "right" then
+        Tablemd.alignColumn("left")
     end
 end
 
@@ -324,10 +374,8 @@ H.get_column_defs = function(s, e)
         -- Split the line by the pipe symbol
         local t = H.split_string(line, "|")
 
-        -- Separator row should not affect max length
-        if H.is_separator(t) then
-            goto continue
-        end
+        -- Pre-calculate this to save time
+        local is_sep = H.is_separator(t)
 
         -- For each column
         for k, v in ipairs(t) do
@@ -345,7 +393,7 @@ H.get_column_defs = function(s, e)
             elseif string.match(trimmed_str, "^:-+$") or string.match(trimmed_str, "^-+$") then
                 alignment = 'left'
             else
-                alignment = nil
+                alignment = Tablemd.config.defaultAlign
             end
 
             -- if the sub table doesn't already exist, then add it
@@ -353,7 +401,9 @@ H.get_column_defs = function(s, e)
                 table.insert(defs, k, { length = str_len, align = alignment })
             else
                 -- update the object if the length is greater
-                if str_len > defs[k]["length"] then
+                -- Don't update if this row is separator, because separator row
+                -- length should not affect it.
+                if str_len > defs[k]["length"] and not is_sep then
                     defs[k]["length"] = str_len
                 end
                 -- if we haven't already set the alignment
@@ -362,7 +412,6 @@ H.get_column_defs = function(s, e)
                 end
             end
         end
-        ::continue::
     end
 
     return defs
@@ -373,12 +422,15 @@ end
 H.get_current_column_index = function()
     local cursor_location = vim.api.nvim_win_get_cursor(0)
     local line = H.trim_string(vim.api.nvim_buf_get_lines(0, cursor_location[1] - 1, cursor_location[1], false)[1])
+    -- print(line)
     line = string.sub(line, 1, cursor_location[2] - 1)
+    -- print(line)
 
     local count = 0
-    for i in line:gmatch("|") do
+    for i in line:gmatch(Tablemd.config.separatorColumn) do
         count = count + 1
     end
+    -- print(count)
 
     return count
 end
@@ -395,7 +447,7 @@ H.get_formatted_line = function(line, col_defs, count)
     if H.is_separator(t) then
         build_str = "|"
         for _, v in ipairs(col_defs) do
-            build_str = build_str .. H.get_separator_cell(v["length"] + 2) .. Tablemd.config.separatorColumn
+            build_str = build_str .. H.get_separator_cell(v["length"] + 2, v["align"]) .. Tablemd.config.separatorColumn
         end
         build_str = build_str:sub(1, -2)
         build_str = build_str .. "|"
@@ -411,10 +463,22 @@ H.get_formatted_line = function(line, col_defs, count)
         build_str = string.gsub(build_str, '^%s*(.-)%s*$', '%1')
     end
 
+    return H.add_indent(build_str, count)
+end
+
+H.replace_last = function(line)
+    return line:sub(1, -2) .. "|"
+end
+
+---Add indentation in the beginning
+---@param line string Line to be added
+---@param count number Amount of indentation
+---@return string # Modified string
+H.add_indent = function(line, count)
     for _ = 1, count do
-        build_str = " " .. build_str
+        line = " " .. line
     end
-    return build_str
+    return line
 end
 
 --- Check if given line is separator line
@@ -426,7 +490,7 @@ H.is_separator = function(t)
     else
         for _, v in ipairs(t) do
             for c in v:gmatch(".") do
-                if c ~= Tablemd.config.separator and c ~= Tablemd.config.separatorColumn then
+                if c ~= Tablemd.config.separator and c ~= Tablemd.config.separatorColumn and c ~= ":" then
                     return false
                 end
             end
@@ -437,11 +501,21 @@ end
 
 ---Returns string of separators for one cell.
 ---@param width number
+---@alias align
+---| '"left"'
+---| '"right"'
+---| '"center"'
 ---@return string
-H.get_separator_cell = function(width)
+H.get_separator_cell = function(width, align)
     local res = ""
     for _ = 1, width do
         res = res .. Tablemd.config.separator
+    end
+
+    if align == "right" then
+        res = res:sub(1, -2) .. ":"
+    elseif align == "center" then
+        res = ":" .. res:sub(1, -2):sub(2, -1) .. ":"
     end
     return res
 end
@@ -482,7 +556,7 @@ end
 
 ---Set default keymaps
 H.setKeyMap = function()
-    vim.api.nvim_set_keymap("n", "<Leader>ef", ':lua require("tablemd").format()<cr>', { noremap = true, desc = "Format table" })
+    vim.api.nvim_set_keymap("n", "<Leader>ef", ':lua require("tablemd").formatTable()<cr>', { noremap = true, desc = "Format table" })
     vim.api.nvim_set_keymap("n", "<Leader>eC", ':lua require("tablemd").insertColumn(false)<cr>', { noremap = true, desc = "Insert column before" })
     vim.api.nvim_set_keymap("n", "<Leader>ec", ':lua require("tablemd").insertColumn(true)<cr>', { noremap = true, desc = "Insert column after" })
     vim.api.nvim_set_keymap("n", "<Leader>ed", ':lua require("tablemd").deleteColumn()<cr>', { noremap = true, desc = "Delete column" })
@@ -490,6 +564,7 @@ H.setKeyMap = function()
     vim.api.nvim_set_keymap("n", "<Leader>eR", ':lua require("tablemd").insertRow(true)<cr>', { noremap = true, desc = "Insert row after" })
     vim.api.nvim_set_keymap("n", "<Leader>ek", ':lua require("tablemd").alignColumn("center")<cr>', { noremap = true, desc = "Toggle column align" })
     vim.api.nvim_set_keymap("n", "<Leader>em", ':lua require("tablemd").toggleMode()<cr>', { noremap = true, desc = "Toggle tablemode" })
+    vim.api.nvim_set_keymap("n", "<Leader>et", ':lua require("tablemd").toggleAlign()<cr>', { noremap = true, desc = "Toggle column alignment" })
 end
 
 H.default_config = vim.deepcopy(Tablemd.config)
@@ -506,7 +581,8 @@ H.setup_config = function(config)
     vim.validate({
         defaultKeymap = { config.defaultKeymap, 'boolean' },
         separator = { config.separator, "string" },
-        separatorColumn = { config.separatorColumn, "string" }
+        separatorColumn = { config.separatorColumn, "string" },
+        defaultAlign = { config.defaultAlign, "string" }
     })
 
     return config
