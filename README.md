@@ -48,7 +48,7 @@ Lazy.
 
 This plugin does not do anything by default, you have to initialize all the API
 calls. However, it sets a set of keybindings by default, which you can disable.
-For the available API-calls, check [key maps](### Key maps)
+For the available API-calls, check [key maps](#key-maps)
 
 If you want to use the `alignColumn` function call to automatically align a column
 then the information of the alignments is stored
