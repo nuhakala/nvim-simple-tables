@@ -8,8 +8,8 @@ Tablemd.config = {
     default_keymap = true,
     separator = "-",
     separator_column = "|",
-    default_align = "center",
-    mode_events = { "InsertLeave", "TextChanged", "TextChangedI" },
+    default_align = "left",
+    mode_events = { "InsertLeave" }
 }
 
 Tablemd.setup = function(cfg)
@@ -322,6 +322,7 @@ end
 ---@return (string, number) # The trimmed string and number of whitespace in beginning
 H.trim_string = function(s)
     local count = 0
+    s = s ~= nil and s or ""
     for c in s:gmatch(".") do
         if c == " " then
             count = count + 1
@@ -529,7 +530,7 @@ H.get_table_range = function(current_line_number)
         start_line = start_line - 1
     until H.trim_string(current_line):sub(1, 1) ~= "|" or start_line == 0
 
-    start_line = start_line + 1
+    start_line = start_line + 2
 
     -- Go down
     end_line = current_line_number --+ 1
