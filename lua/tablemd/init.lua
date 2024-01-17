@@ -48,6 +48,11 @@ end
 
 ---Aligns the column. Possible values for alignment are "left", "right", and "center".
 function Tablemd.alignColumn(alignment)
+    -- TODO: fix this method in a sense, that if the first row a table is a separator
+    -- then this will add a new separator row even thougt it is not needed.
+    -- Also, it wont toggle the alignment if the first two rows of a table are
+    -- separators.
+
     -- Don't do anything if the alignment value isn't one of the predefined values.
     if not (alignment == "left" or alignment == "right" or alignment == "center") then
         return
@@ -77,14 +82,11 @@ function Tablemd.alignColumn(alignment)
         align_cell = H.get_separator_cell(3, "center") .. "|"
     end
 
-    local table_len = 0
-    for _ in pairs(t) do table_len = table_len + 1 end
-
-    for i = 1, table_len do
+    for i = 1, #t do
         -- If outside of the column we want to align
         if i ~= current_col then
+            -- If second line was not a separator, then we are adding a new row to the table.
             if not is_sep then
-                -- If the row is gonna be new separator, then add separator signs.
                 new_line = new_line .. H.get_separator_cell(3, Tablemd.config.default_align) .. "|"
             else
                 -- If the row is not new, then add the old content
@@ -348,12 +350,7 @@ H.get_column_defs = function(s, e)
         local t = nil
 
         -- If line is separator line, then take custom separator into account
-        local is_sep = true
-        for c in line:sub(2, -2):gmatch(".") do
-            if c ~= Tablemd.config.separator and c ~= Tablemd.config.separator_column and c ~= ":" then
-                is_sep = false
-            end
-        end
+        local is_sep = H.is_separator(line)
 
         -- Get split-string table for the line
         if is_sep then
@@ -368,6 +365,8 @@ H.get_column_defs = function(s, e)
             -- Fix ä, ö not counting correctly. However, this does not provide
             -- full utf8 support.
             local _, str_len = string.gsub(trimmed_str, "[^\128-\193]", "")
+            -- Fix the length if it is separator
+            if is_sep then str_len = 0 end
             local alignment = nil
 
             -- look for alignment indicators
@@ -409,12 +408,7 @@ H.get_current_column_index = function()
     local line = H.trim_string(vim.api.nvim_buf_get_lines(0, cursor_location[1] - 1, cursor_location[1], false)[1])
 
     -- Substitute separator columns if line is separator
-    local is_sep = true
-    for c in line:sub(2, -2):gmatch(".") do
-        if c ~= Tablemd.config.separator and c ~= Tablemd.config.separator_column and c ~= ":" then
-            is_sep = false
-        end
-    end
+    local is_sep = H.is_separator(line)
     if is_sep then
         line = string.gsub(line, Tablemd.config.separator_column, "|")
     end
@@ -475,17 +469,25 @@ H.add_indent = function(line, count)
 end
 
 --- Check if given line is separator line
----@param t table Table containing split pieces form split_string
+---@param t table | string Table containing split pieces form split_string or the line
 ---@return boolean
 H.is_separator = function(t)
-    if next(t) == nil then
-        return true
-    else
-        for _, v in ipairs(t) do
-            for c in v:gmatch(".") do
-                if c ~= Tablemd.config.separator and c ~= Tablemd.config.separator_column and c ~= ":" then
-                    return false
+    if type(t) == "table" then
+        if next(t) == nil then
+            return true
+        else
+            for _, v in ipairs(t) do
+                for c in v:gmatch(".") do
+                    if c ~= Tablemd.config.separator and c ~= Tablemd.config.separator_column and c ~= ":" then
+                        return false
+                    end
                 end
+            end
+        end
+    else
+        for c in t:sub(2, -2):gmatch(".") do
+            if c ~= Tablemd.config.separator and c ~= Tablemd.config.separator_column and c ~= ":" then
+                return false
             end
         end
     end
@@ -530,7 +532,12 @@ H.get_table_range = function(current_line_number)
         start_line = start_line - 1
     until H.trim_string(current_line):sub(1, 1) ~= "|" or start_line == 0
 
-    start_line = start_line + 2
+    -- Fix the wrong start line if we reached the start of buffer
+    if (start_line == 0) then
+        start_line = 1
+    else
+        start_line = start_line + 2
+    end
 
     -- Go down
     end_line = current_line_number --+ 1
