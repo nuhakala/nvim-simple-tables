@@ -48,11 +48,6 @@ end
 
 ---Aligns the column. Possible values for alignment are "left", "right", and "center".
 function Tablemd.alignColumn(alignment)
-    -- TODO: fix this method in a sense, that if the first row a table is a separator
-    -- then this will add a new separator row even thougt it is not needed.
-    -- Also, it wont toggle the alignment if the first two rows of a table are
-    -- separators.
-
     -- Don't do anything if the alignment value isn't one of the predefined values.
     if not (alignment == "left" or alignment == "right" or alignment == "center") then
         return
@@ -99,11 +94,11 @@ function Tablemd.alignColumn(alignment)
         end
     end
 
-    -- Replace second line with the formatted line in the buffer, if the second
-    -- line is a separator.
-    -- If not, then add a new header line
-    if is_sep then
-        vim.api.nvim_buf_set_lines(0, start_line, start_line + 1, false, { H.add_indent(new_line, indent) })
+    -- Check if separator line exists, if not, then add new separator line to
+    -- second row.
+    local sep_row = H.find_sep_line(start_line, end_line)
+    if (sep_row) then
+        vim.api.nvim_buf_set_lines(0, sep_row - 1, sep_row, false, { H.add_indent(new_line, indent) })
     else
         vim.api.nvim_buf_set_lines(0, start_line, start_line, false, { H.add_indent(new_line, indent) })
     end
@@ -548,6 +543,20 @@ H.get_table_range = function(current_line_number)
 
     -- Return start and end line numbers
     return start_line, end_line
+end
+
+--- Finds separator row in table
+---@param start_line number Start line of the table
+---@param end_line number End line of the table
+---@return number | nil Line number of the separator row or nil if not found
+H.find_sep_line = function(start_line, end_line)
+    for i = start_line, end_line do
+        current_line = vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1]
+        if H.is_separator(current_line) then
+            return i
+        end
+    end
+    return nil
 end
 
 ---Set default keymaps
