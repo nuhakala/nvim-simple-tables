@@ -521,22 +521,22 @@ H.get_table_range = function(current_line_number)
     local buf_line_count = vim.api.nvim_buf_line_count(0)
 
     -- Go Up
-    start_line = current_line_number -- - 1
+    start_line = current_line_number
 
-    repeat
-        current_line = vim.api.nvim_buf_get_lines(0, start_line - 1, start_line, false)[1]
+    current_line = vim.api.nvim_buf_get_lines(0, start_line - 1, start_line, false)[1]
+    while H.trim_string(current_line):sub(1, 1) == "|" and start_line > 0 do
         start_line = start_line - 1
-    until H.trim_string(current_line):sub(1, 1) ~= "|" or start_line == 0
+        current_line = vim.api.nvim_buf_get_lines(0, start_line - 1, start_line, false)[1]
+    end
+    start_line = start_line + 1
 
     -- Fix the wrong start line if we reached the start of buffer
-    if (start_line == 0) then
+    if (start_line < 1) then
         start_line = 1
-    else
-        start_line = start_line + 2
     end
 
     -- Go down
-    end_line = current_line_number --+ 1
+    end_line = current_line_number
     current_line = vim.api.nvim_buf_get_lines(0, end_line - 1, end_line, false)[1]
 
     while current_line ~= nil and H.trim_string(current_line):sub(1, 1) == "|" and end_line <= buf_line_count do
