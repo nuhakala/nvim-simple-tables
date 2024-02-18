@@ -11,8 +11,20 @@ and adds some functionality to be more like
 - Mode for automatically formatting table
 - Auto-format separator lines
 - Not limited to some filetype: you can call the lua functions in any file
-- Arbitrary prefix in table rows, table starts from first '|'
+- Prefix before table row, like code comment
 - Choose custom separators
+
+When formatting table, the prefix is checked from the row where the cursor is.
+Then the table is formatted using that prefix. If there are multiple prefixes
+(that have same length), then those other prefixes are overwritten. Prefixes
+with different length break the table. That is
+```
+// | first | table |
+--- | second | table |
+```
+Both rows are considered as separate tables, because the prefixes have different
+lengths. The prefix also counts whitespace (so it preserves indentation also).
+
 
 ## Installation
 
