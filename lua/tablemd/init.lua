@@ -214,7 +214,6 @@ function Tablemd.insertRow(before)
         line_num = line_num - 1
     end
 
-    new_line = H.replace_last(new_line)
     -- To insert a line, pass in the same line number for both start and end.
     vim.api.nvim_buf_set_lines(0, line_num, line_num, false, { H.add_indent(new_line, indent) })
 
