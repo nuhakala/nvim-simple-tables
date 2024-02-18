@@ -2,6 +2,7 @@
 local Tablemd = {}
 local H = {} -- for helper functions
 local modeFlag = false
+local prefix = ""
 
 -- Default config
 Tablemd.config = {
@@ -23,9 +24,15 @@ end
 
 
 -- TABLEMODE FUNCTIONS
+-- Note: we need to set prefix in every function call so that the functions will
+-- add correct amount indentation or correct prefix to table lines.
+-- Prefix is module-wide variable, because I did not want to have it as parameter
+-- in every function call.
 
 ---Formats the markdown table so cells in a column are a uniform width.
 function Tablemd.formatTable()
+    H.set_line_prefix()
+
     local start_line = nil
     local end_line = nil
     local cursor_location = vim.fn.line('v')
@@ -38,8 +45,8 @@ function Tablemd.formatTable()
 
     -- Format each line
     for i = start_line, end_line do -- The range includes both ends.
-        local line, count = H.trim_string(vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1])
-        local formatted_line = H.get_formatted_line(line, col_defs, count)
+        local line = H.trim_string(H.get_table_line(i - 1, i))
+        local formatted_line = H.get_formatted_line(line, col_defs)
 
         -- replace the line with the formatted line in the buffer
         vim.api.nvim_buf_set_lines(0, i - 1, i, false, { formatted_line })
@@ -48,6 +55,8 @@ end
 
 ---Aligns the column. Possible values for alignment are "left", "right", and "center".
 function Tablemd.alignColumn(alignment)
+    H.set_line_prefix()
+
     -- Don't do anything if the alignment value isn't one of the predefined values.
     if not (alignment == "left" or alignment == "right" or alignment == "center") then
         return
@@ -62,7 +71,7 @@ function Tablemd.alignColumn(alignment)
     local current_col = H.get_current_column_index()
 
     -- Get the second line
-    local line, indent = H.trim_string(vim.api.nvim_buf_get_lines(0, start_line, start_line + 1, false)[1])
+    local line = H.trim_string(H.get_table_line(start_line, start_line + 1))
     local t = H.split_string(line, "|")
     local is_sep = H.is_separator(line)
 
@@ -98,9 +107,9 @@ function Tablemd.alignColumn(alignment)
     -- second row.
     local sep_row = H.find_sep_line(start_line, end_line)
     if (sep_row) then
-        vim.api.nvim_buf_set_lines(0, sep_row - 1, sep_row, false, { H.add_indent(new_line, indent) })
+        vim.api.nvim_buf_set_lines(0, sep_row - 1, sep_row, false, { prefix .. new_line })
     else
-        vim.api.nvim_buf_set_lines(0, start_line, start_line, false, { H.add_indent(new_line, indent) })
+        vim.api.nvim_buf_set_lines(0, start_line, start_line, false, { prefix .. new_line })
     end
 
     Tablemd.formatTable()
@@ -108,6 +117,7 @@ end
 
 ---Deletes the current column from the table.
 function Tablemd.deleteColumn()
+    H.set_line_prefix()
     local start_line = nil
     local end_line = nil
     local cursor_location = vim.api.nvim_win_get_cursor(0)
@@ -120,7 +130,7 @@ function Tablemd.deleteColumn()
 
     -- Format each line
     for i = start_line, end_line do
-        local line, indent = H.trim_string(vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1])
+        local line = H.trim_string(H.get_table_line(i - 1, i))
         local t = H.split_string(line, "|")
 
         local new_line = "|"
@@ -141,7 +151,7 @@ function Tablemd.deleteColumn()
         end
 
         -- replace the line with the formatted line in the buffer
-        vim.api.nvim_buf_set_lines(0, i - 1, i, false, { H.add_indent(new_line, indent) })
+        vim.api.nvim_buf_set_lines(0, i - 1, i, false, { prefix .. new_line })
     end
 
     Tablemd.formatTable()
@@ -150,6 +160,7 @@ end
 ---Formats each line in the table with a new column.
 ---@param before boolean If true, the column will be inserted on the left side of the current column
 function Tablemd.insertColumn(before)
+    H.set_line_prefix()
     local start_line = nil
     local end_line = nil
     local cursor_location = vim.api.nvim_win_get_cursor(0)
@@ -162,7 +173,7 @@ function Tablemd.insertColumn(before)
 
     -- Format each line
     for i = start_line, end_line do -- The range includes both ends.
-        local line, indent = H.trim_string(vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1])
+        local line = H.trim_string(H.get_table_line(i - 1, i))
 
         local t = H.split_string(line, "|")
 
@@ -188,7 +199,7 @@ function Tablemd.insertColumn(before)
         end
 
         -- replace the line with the formatted line in the buffer
-        vim.api.nvim_buf_set_lines(0, i - 1, i, false, { H.add_indent(new_line, indent) })
+        vim.api.nvim_buf_set_lines(0, i - 1, i, false, { prefix .. new_line })
     end
 
     Tablemd.formatTable()
@@ -197,10 +208,11 @@ end
 ---Inserts a new row into the table
 ---@param before boolean If true, the row will be inserted above the current row
 function Tablemd.insertRow(before)
+    H.set_line_prefix()
+
     -- Get the current location of the cursor
     local cursor_location = vim.api.nvim_win_get_cursor(0)
     local line_num = cursor_location[1]
-    local _, indent = H.trim_string(vim.api.nvim_buf_get_lines(0, line_num - 1, line_num, false)[1])
 
     local col_defs = H.get_column_defs(line_num, line_num)
     local new_line = "|"
@@ -215,7 +227,7 @@ function Tablemd.insertRow(before)
     end
 
     -- To insert a line, pass in the same line number for both start and end.
-    vim.api.nvim_buf_set_lines(0, line_num, line_num, false, { H.add_indent(new_line, indent) })
+    vim.api.nvim_buf_set_lines(0, line_num, line_num, false, { prefix .. new_line })
 
     -- Move the cursor to the newly created line
     vim.api.nvim_win_set_cursor(0, { line_num + 1, cursor_location[2] })
@@ -242,6 +254,8 @@ end
 
 ---Toggle alignment of the column
 Tablemd.toggleAlign = function()
+    H.set_line_prefix()
+
     local cursor_location = vim.api.nvim_win_get_cursor(0)
     -- Get the range of lines to format
     local start_line, end_line = H.get_table_range(cursor_location[1])
@@ -319,19 +333,10 @@ end
 
 ---Trim spaces from beginning and end of string
 ---@param s string The string to trim.
----@return (string, number) # The trimmed string and number of whitespace in beginning
+---@return string # The trimmed string and number of whitespace in beginning
 H.trim_string = function(s)
-    local count = 0
     s = s ~= nil and s or ""
-    for c in s:gmatch(".") do
-        if c == " " then
-            count = count + 1
-        else
-            goto continue
-        end
-    end
-    ::continue::
-    return s:match("^%s*(.-)%s*$"), count
+    return s:match("^%s*(.-)%s*$")
 end
 
 ---Returns a table with the max column widths and alignment information.
@@ -344,7 +349,7 @@ H.get_column_defs = function(s, e)
 
     for i = s, e do
         -- Read the line from the buffer
-        local line = H.trim_string(vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1])
+        local line = H.trim_string(H.get_table_line(i - 1, i))
         local t = nil
 
         -- If line is separator line, then take custom separator into account
@@ -403,7 +408,7 @@ end
 ---@return number # The column index. This is Lua, so it is 1 based.
 H.get_current_column_index = function()
     local cursor_location = vim.api.nvim_win_get_cursor(0)
-    local line = H.trim_string(vim.api.nvim_buf_get_lines(0, cursor_location[1] - 1, cursor_location[1], false)[1])
+    local line = H.trim_string(H.get_table_line(cursor_location[1] - 1, cursor_location[1]))
 
     -- Substitute separator columns if line is separator
     local is_sep = H.is_separator(line)
@@ -425,9 +430,8 @@ end
 ---Returns the formatted line
 ---@param line string The line to be formatted
 ---@param col_defs table Table with metadata about each column
----@param count number Number of whitespace in beginning
 ---@return string # The formatted replacement line
-H.get_formatted_line = function(line, col_defs, count)
+H.get_formatted_line = function(line, col_defs)
     local t = H.split_string(line, "|")
     local build_str = "| "
 
@@ -452,18 +456,7 @@ H.get_formatted_line = function(line, col_defs, count)
         build_str = string.gsub(build_str, '^%s*(.-)%s*$', '%1')
     end
 
-    return H.add_indent(build_str, count)
-end
-
----Add indentation in the beginning
----@param line string Line to be added
----@param count number Amount of indentation
----@return string # Modified string
-H.add_indent = function(line, count)
-    for _ = 1, count do
-        line = " " .. line
-    end
-    return line
+    return prefix .. build_str
 end
 
 --- Check if given line is separator line
@@ -517,10 +510,10 @@ H.get_table_range = function(current_line_number)
     -- Go Up
     start_line = current_line_number
 
-    current_line = vim.api.nvim_buf_get_lines(0, start_line - 1, start_line, false)[1]
+    current_line = H.get_table_line(start_line - 1, start_line)
     while H.trim_string(current_line):sub(1, 1) == "|" and start_line > 0 do
         start_line = start_line - 1
-        current_line = vim.api.nvim_buf_get_lines(0, start_line - 1, start_line, false)[1]
+        current_line = H.get_table_line(start_line - 1, start_line)
     end
     start_line = start_line + 1
 
@@ -531,11 +524,11 @@ H.get_table_range = function(current_line_number)
 
     -- Go down
     end_line = current_line_number
-    current_line = vim.api.nvim_buf_get_lines(0, end_line - 1, end_line, false)[1]
+    current_line = H.get_table_line(end_line - 1, end_line)
 
     while current_line ~= nil and H.trim_string(current_line):sub(1, 1) == "|" and end_line <= buf_line_count do
         end_line = end_line + 1
-        current_line = vim.api.nvim_buf_get_lines(0, end_line - 1, end_line, false)[1]
+        current_line = H.get_table_line(end_line - 1, end_line)
     end
 
     end_line = end_line - 1
@@ -550,12 +543,34 @@ end
 ---@return number | nil Line number of the separator row or nil if not found
 H.find_sep_line = function(start_line, end_line)
     for i = start_line, end_line do
-        current_line = vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1]
+        local current_line = H.get_table_line(i - 1, i)
         if H.is_separator(current_line) then
             return i
         end
     end
     return nil
+end
+
+--- Returns the prefix before table
+H.set_line_prefix = function()
+    prefix = ""
+    local cl = vim.api.nvim_win_get_cursor(0)[1]
+    local line = vim.api.nvim_buf_get_lines(0, cl - 1, cl, false)[1]
+    for c in line:gmatch(".") do
+        if c ~= "|" then
+            prefix = prefix .. c
+        else
+            return
+        end
+    end
+end
+
+H.get_table_line = function(s, e)
+    local current_line = vim.api.nvim_buf_get_lines(0, s, e, false)[1]
+    if string.len(current_line) < string.len(prefix) then
+        return ""
+    end
+    return current_line:sub(string.len(prefix), -1)
 end
 
 ---Set default keymaps
