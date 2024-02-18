@@ -418,7 +418,7 @@ H.get_current_column_index = function()
     end
 
     -- Remove line after cursor
-    line = string.sub(line, 1, cursor_location[2] - 1)
+    line = string.sub(line, 1, cursor_location[2])
 
     local count = 0
     for _ in line:gmatch("|") do
