@@ -69,7 +69,7 @@ function Tablemd.alignColumn(alignment)
     -- Get the second line
     local line, indent = H.trim_string(vim.api.nvim_buf_get_lines(0, start_line, start_line + 1, false)[1])
     local t = H.split_string(line, "|")
-    local is_sep = H.is_separator(t)
+    local is_sep = H.is_separator(line)
 
     -- Rebuild the line
     local new_line = "|"
@@ -132,7 +132,7 @@ function Tablemd.deleteColumn()
 
         -- If line is separator, we can just replace the row with this, because
         -- formatTable will format it nicely.
-        if H.is_separator(t) then
+        if H.is_separator(line) then
             new_line = "||"
         else
             local table_len = 0
@@ -172,7 +172,7 @@ function Tablemd.insertColumn(before)
         local t = H.split_string(line, "|")
 
         local new_line = "|"
-        if H.is_separator(t) then
+        if H.is_separator(line) then
             new_line = "||"
         else
             local table_len = 0
@@ -312,6 +312,10 @@ H.split_string = function(input, sep)
         sep = "%s"
     end
 
+    -- Add space to empty columns to fix formatting
+    input = input:gsub(sep, sep.." ")
+    input = H.trim_string(input)
+
     local t = {}
     for str in string.gmatch(input, "([^" .. sep .. "]+)") do
         table.insert(t, str)
@@ -434,7 +438,7 @@ H.get_formatted_line = function(line, col_defs, count)
     local build_str = "| "
 
     -- If separator, then build separator line
-    if H.is_separator(t) then
+    if H.is_separator(line) then
         build_str = "|"
         for _, v in ipairs(col_defs) do
             local align = v["align"] and v["align"] or Tablemd.config.default_align
@@ -469,26 +473,18 @@ H.add_indent = function(line, count)
 end
 
 --- Check if given line is separator line
----@param t table | string Table containing split pieces form split_string or the line
+---@param t string The line to check
 ---@return boolean
 H.is_separator = function(t)
-    if type(t) == "table" then
-        if next(t) == nil then
-            return true
-        else
-            for _, v in ipairs(t) do
-                for c in v:gmatch(".") do
-                    if c ~= Tablemd.config.separator and c ~= Tablemd.config.separator_column and c ~= ":" then
-                        return false
-                    end
-                end
-            end
-        end
-    else
-        for c in t:sub(2, -2):gmatch(".") do
-            if c ~= Tablemd.config.separator and c ~= Tablemd.config.separator_column and c ~= ":" then
-                return false
-            end
+    -- Check special case
+    if t == "||" then
+        return true
+    end
+
+    -- Check lines that are already formatted
+    for c in t:sub(2, -2):gmatch(".") do
+        if c ~= Tablemd.config.separator and c ~= Tablemd.config.separator_column and c ~= ":" then
+            return false
         end
     end
     return true
