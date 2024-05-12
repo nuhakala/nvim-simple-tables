@@ -285,7 +285,7 @@ H.pad_string = function(input, len, alignment)
     -- Treat alignment as an optional paramenter with a default value
     alignment = alignment or Tablemd.config.default_align
 
-    local space_count = len - string.len(input);
+    local space_count = len - vim.fn.strdisplaywidth(input);
 
     -- default the spacing to a left justification
     local left_spaces = 0
@@ -367,7 +367,7 @@ H.get_column_defs = function(s, e)
             local trimmed_str = H.trim_string(v)
             -- Fix ä, ö not counting correctly. However, this does not provide
             -- full utf8 support.
-            local _, str_len = string.gsub(trimmed_str, "[^\128-\193]", "")
+            local str_len = vim.fn.strdisplaywidth(trimmed_str)
             -- Fix the length if it is separator
             if is_sep then str_len = 0 end
             local alignment = nil
