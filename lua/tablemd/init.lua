@@ -567,6 +567,9 @@ end
 
 H.get_table_line = function(s, e)
     local current_line = vim.api.nvim_buf_get_lines(0, s, e, false)[1]
+    if current_line == nil then
+        return nil
+    end
     if string.len(current_line) < string.len(prefix) then
         return ""
     end
