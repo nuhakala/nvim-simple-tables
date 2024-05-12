@@ -416,8 +416,8 @@ H.get_current_column_index = function()
         line = string.gsub(line, Tablemd.config.separator_column, "|")
     end
 
-    -- Remove line after cursor
-    line = string.sub(line, 1, cursor_location[2])
+    -- Remove line after cursor, correct cursor position according to prefix
+    line = string.sub(line, 1, cursor_location[2] - string.len(prefix))
 
     local count = 0
     for _ in line:gmatch("|") do
