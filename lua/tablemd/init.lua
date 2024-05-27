@@ -31,26 +31,8 @@ end
 
 ---Formats the markdown table so cells in a column are a uniform width.
 function Tablemd.formatTable()
-    H.set_line_prefix()
-
-    local start_line = nil
-    local end_line = nil
-    local cursor_location = vim.fn.line('v')
-
-    -- Get the range of lines to format
-    start_line, end_line = H.get_table_range(cursor_location)
-
-    -- Get column definitions
-    local col_defs = H.get_column_defs(start_line, end_line)
-
-    -- Format each line
-    for i = start_line, end_line do -- The range includes both ends.
-        local line = H.trim_string(H.get_table_line(i - 1, i))
-        local formatted_line = H.get_formatted_line(line, col_defs)
-
-        -- replace the line with the formatted line in the buffer
-        vim.api.nvim_buf_set_lines(0, i - 1, i, false, { formatted_line })
-    end
+    H.format()
+    print("Table formatted")
 end
 
 ---Aligns the column. Possible values for alignment are "left", "right", and "center".
@@ -112,7 +94,8 @@ function Tablemd.alignColumn(alignment)
         vim.api.nvim_buf_set_lines(0, start_line, start_line, false, { prefix .. new_line })
     end
 
-    Tablemd.formatTable()
+    H.format()
+    print("Column aligned " .. alignment)
 end
 
 ---Deletes the current column from the table.
@@ -154,7 +137,8 @@ function Tablemd.deleteColumn()
         vim.api.nvim_buf_set_lines(0, i - 1, i, false, { prefix .. new_line })
     end
 
-    Tablemd.formatTable()
+    H.format()
+    print("Column deleted")
 end
 
 ---Formats each line in the table with a new column.
@@ -202,7 +186,8 @@ function Tablemd.insertColumn(before)
         vim.api.nvim_buf_set_lines(0, i - 1, i, false, { prefix .. new_line })
     end
 
-    Tablemd.formatTable()
+    H.format()
+    print("Column inserted")
 end
 
 ---Inserts a new row into the table
@@ -232,7 +217,8 @@ function Tablemd.insertRow(before)
     -- Move the cursor to the newly created line
     vim.api.nvim_win_set_cursor(0, { line_num + 1, cursor_location[2] })
 
-    Tablemd.formatTable()
+    H.format()
+    print("Row inserted")
 end
 
 ---Toggle tablemode
@@ -241,7 +227,7 @@ Tablemd.toggleMode = function()
         local auGroup = vim.api.nvim_create_augroup('Tablemode', { clear = false })
         vim.api.nvim_create_autocmd(Tablemd.config.mode_events, {
             group = auGroup,
-            callback = function() Tablemd.formatTable() end,
+            callback = function() H.format() end,
         })
         modeFlag = true
         print("Tablemode enabled")
@@ -276,6 +262,30 @@ end
 
 
 -- HELPER FUNCTIONS
+
+--- Format table
+H.format = function()
+    H.set_line_prefix()
+
+    local start_line = nil
+    local end_line = nil
+    local cursor_location = vim.fn.line('v')
+
+    -- Get the range of lines to format
+    start_line, end_line = H.get_table_range(cursor_location)
+
+    -- Get column definitions
+    local col_defs = H.get_column_defs(start_line, end_line)
+
+    -- Format each line
+    for i = start_line, end_line do -- The range includes both ends.
+        local line = H.trim_string(H.get_table_line(i - 1, i))
+        local formatted_line = H.get_formatted_line(line, col_defs)
+
+        -- replace the line with the formatted line in the buffer
+        vim.api.nvim_buf_set_lines(0, i - 1, i, false, { formatted_line })
+    end
+end
 
 ---Pad string
 ---@param input string The string to pad.
